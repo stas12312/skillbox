@@ -11,6 +11,11 @@ class DataWrapper(Protocol):
         :param data:
         :return:
         """
+        if data.decode() == 'exit\n':
+            reactor.callFromThread(reactor.stop)
+
+        if self.output:
+            self.output.write(data)
 
 
 class UserProtocol(DataWrapper):
@@ -19,12 +24,20 @@ class UserProtocol(DataWrapper):
         Передача управления ввода
         :return:
         """
+        input_forwarder = DataWrapper()
+        input_forwarder.output = self.transport
+
+        stdio_wrapper = stdio.StandardIO(input_forwarder)
+        self.output = stdio_wrapper
 
     def connectionMade(self):
         """
         Обработчик успешного соединения
         :return:
         """
+        print("Connected [OK]")
+        self.transport.write(f"login:{self.factory.login}".encode())
+        self.wrap_input()
 
 
 class UserFactory(ClientFactory):
@@ -36,6 +49,7 @@ class UserFactory(ClientFactory):
         Инициализация клиента
         :param user_login:
         """
+        self.login = user_login
 
     def startedConnecting(self, connector):
         """
@@ -43,6 +57,7 @@ class UserFactory(ClientFactory):
         :param connector:
         :return:
         """
+        print("Connecting to the server...")
 
     def clientConnectionLost(self, connector, reason):
         """
@@ -51,6 +66,8 @@ class UserFactory(ClientFactory):
         :param reason:
         :return:
         """
+        print("Disconnected")
+        reactor.callFromThread(reactor.stop)
 
     def clientConnectionFailed(self, connector, reason):
         """
@@ -59,13 +76,14 @@ class UserFactory(ClientFactory):
         :param reason:
         :return:
         """
+        print("Connection failed")
+        reactor.callFromThread(reactor.stop)
 
 
 if __name__ == '__main__':
-    login = input("Your login >>> ")
     reactor.connectTCP(
         "localhost",
         7410,
-        UserFactory(login)
+        UserFactory(input("Your login >>> "))
     )
     reactor.run()

@@ -20,18 +20,33 @@ class Client(Protocol):
         """
         self.ip = self.transport.getHost().host
         self.factory.clients.append(self)
-        print("New user connected")
-        self.factory.notify_all_users("New user connected")
+
+        print(f"Client connected: {self.ip}")
+
+        self.transport.write("Welcome to the chat v0.1\n".encode())
 
     def dataReceived(self, data: bytes):
         """
         Обработчик нового сообщения от клиента
         :param data:
         """
-        message = data.decode()
+        message = data.decode().replace('\n', '')
 
-        self.factory.notify_all_users(message)
-        print(f"{self.ip}: {message}")
+        if self.login is not None:
+            server_message = f"{self.login}: {message}"
+            self.factory.notify_all_users(server_message)
+
+            print(server_message)
+        else:
+            if message.startswith("login:"):
+                self.login = message.replace("login:", "")
+
+                notification = f"New user connected: {self.login}"
+
+                self.factory.notify_all_users(notification)
+                print(notification)
+            else:
+                print("Error: Invalid client login")
 
     def connectionLost(self, reason=None):
         """
@@ -39,6 +54,7 @@ class Client(Protocol):
         :param reason:
         """
         self.factory.clients.remove(self)
+        print(f"Client disconnected: {self.ip}")
 
 
 class Chat(Factory):
@@ -49,13 +65,14 @@ class Chat(Factory):
         Инициализация сервера
         """
         self.clients = []
+        print("*" * 10, "\nStart server \nCompleted [OK]")
 
     def startFactory(self):
         """
         Запуск процесса ожидания новых клиентов
         :return:
         """
-        print("Server started [OK]")
+        print("\n\nStart listening for the clients...")
 
     def buildProtocol(self, addr):
         """
@@ -72,7 +89,7 @@ class Chat(Factory):
         :return:
         """
         for user in self.clients:
-            user.transport.write(data.encode())
+            user.transport.write(f"{data}\n".encode())
 
 
 if __name__ == '__main__':
