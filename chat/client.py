@@ -27,7 +27,7 @@ class UserProtocol(DataWrapper):
         input_forwarder = DataWrapper()
         input_forwarder.output = self.transport
 
-        stdio_wrapper = stdio.StandardIO(input_forwarder, stdout=0)
+        stdio_wrapper = stdio.StandardIO(input_forwarder)
         self.output = stdio_wrapper
 
     def connectionMade(self):
