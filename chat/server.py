@@ -12,23 +12,33 @@ class Client(Protocol):
         Инициализация фабрики клиента
         :param factory:
         """
+        self.factory = factory
 
     def connectionMade(self):
         """
         Обработчик подключения нового клиента
         """
+        self.ip = self.transport.getHost().host
+        self.factory.clients.append(self)
+        print("New user connected")
+        self.factory.notify_all_users("New user connected")
 
     def dataReceived(self, data: bytes):
         """
         Обработчик нового сообщения от клиента
         :param data:
         """
+        message = data.decode()
+
+        self.factory.notify_all_users(message)
+        print(f"{self.ip}: {message}")
 
     def connectionLost(self, reason=None):
         """
         Обработчик отключения клиента
         :param reason:
         """
+        self.factory.clients.remove(self)
 
 
 class Chat(Factory):
@@ -38,12 +48,14 @@ class Chat(Factory):
         """
         Инициализация сервера
         """
+        self.clients = []
 
     def startFactory(self):
         """
         Запуск процесса ожидания новых клиентов
         :return:
         """
+        print("Server started [OK]")
 
     def buildProtocol(self, addr):
         """
@@ -51,6 +63,7 @@ class Chat(Factory):
         :param addr:
         :return:
         """
+        return Client(self)
 
     def notify_all_users(self, data: str):
         """
@@ -58,6 +71,8 @@ class Chat(Factory):
         :param data:
         :return:
         """
+        for user in self.clients:
+            user.transport.write(data.encode())
 
 
 if __name__ == '__main__':
