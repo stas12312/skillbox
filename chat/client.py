@@ -35,10 +35,9 @@ class UserProtocol(DataWrapper):
         Обработчик успешного соединения
         :return:
         """
-        self.wrap_input()
         print("Connected [OK]")
-
         self.transport.write(f"login:{self.factory.login}".encode())
+        self.wrap_input()
 
 
 class UserFactory(ClientFactory):
